@@ -1,7 +1,7 @@
 Django Improved Inlines
 =======================
 
-Django improved inlines is a version of the inlines app from (django-basic-apps)[http://github.com/nathanborror/django-basic-apps/] that has two specific features that I needed:
+Django improved inlines is a version of the inlines app from [django-basic-apps](http://github.com/nathanborror/django-basic-apps/) that has two specific features that I needed:
 
 filter="" instead of just ids
 and template="" instead of just inlines/<app>_<model>.html
@@ -11,7 +11,7 @@ That's it. Thanks to nathanborror for the initial code.
 Dependancies
 ------------
 
-* BeautifulSoup (http://www.crummy.com/software/BeautifulSoup/) is required to use the inlines app.
+* BeautifulSoup [http://www.crummy.com/software/BeautifulSoup/] is required to use the inlines app.
 
 Usage
 -----
