@@ -11,7 +11,7 @@ That's it. Thanks to nathanborror for the initial code.
 Dependancies
 ------------
 
-* BeautifulSoup (http://www.crummy.com/software/BeautifulSoup/) is required to use the blog and, subsequently, the inlines app.
+* BeautifulSoup (http://www.crummy.com/software/BeautifulSoup/) is required to use the inlines app.
 
 Usage
 -----
