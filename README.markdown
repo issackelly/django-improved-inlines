@@ -24,7 +24,7 @@ a photo into a blog post body.
 Drop-in replacement for django-basic-inlines/inlines
 
 An example of the markup is:
-    <inline type="calendar.event" filter="date__gte=today" template="calendar/event_inline.html" />
+    <inline type="calendar.event" filter="date__gte=datetime.date.today()" template="calendar/event_inline.html" />
 
 other attribute options are:
 	<inline type="app.model" id="<some pk>"  class="some_class_passed_to_template"/>

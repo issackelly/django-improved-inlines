@@ -6,6 +6,7 @@ from django.utils.encoding import smart_unicode
 from django.template.loader import render_to_string
 from django.utils.safestring import mark_safe
 import ast
+import datetime
 
 def inlines(value, return_list=False):
     try:
