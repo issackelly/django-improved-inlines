@@ -5,7 +5,7 @@ from django.http import Http404
 from django.utils.encoding import smart_unicode
 from django.template.loader import render_to_string
 from django.utils.safestring import mark_safe
-
+import ast
 
 def inlines(value, return_list=False):
     try:
@@ -76,20 +76,47 @@ def render_inline(inline):
                 return ''
     except KeyError:
         try:
-            obj = model.objects.get(pk=inline['id'])
-            context = { 'content_type':"%s.%s" % (app_label, model_name), 'object': obj, 'class': inline_class, 'settings': settings }
-        except model.DoesNotExist:
-            if settings.DEBUG:
-                raise model.DoesNotExist, "%s with pk of '%s' does not exist" % (model_name, inline['id'])
-            else:
-                return ''
-        except:
-            if settings.DEBUG:
-                raise TemplateSyntaxError, "The <inline> id attribute is missing or invalid."
-            else:
-                return ''
-
-    template = ["inlines/%s_%s.html" % (app_label, model_name), "inlines/default.html"]
+            try:
+                obj = model.objects.get(pk=inline['id'])
+                context = { 'content_type':"%s.%s" % (app_label, model_name), 'object': obj, 'class': inline_class, 'settings': settings }
+            except model.DoesNotExist:
+                if settings.DEBUG:
+                    raise model.DoesNotExist, "%s with pk of '%s' does not exist" % (model_name, inline['id'])
+                else:
+                    return ''
+        except KeyError:
+            try:
+                l = inline['filter'].split(',')
+                filterdict = dict()
+                for item in l:
+                    try:
+                        item.index('=')
+                        parts = item.split('=')
+                        ## This should work for text, Need to test for all sorts of values
+                        filterdict[parts[0]] = eval(parts[1])
+                    except ValueError:
+                        pass
+                obj_list = list(model.objects.filter(**filterdict))
+                context = { 'object_list': obj_list, 'class': inline_class }                
+            except KeyError:
+                if settings.DEBUG:
+                    raise TemplateSyntaxError, "The <inline> filter attribute is missing or invalid."
+                else:
+                    return ''
+            except ValueError:
+                if settings.DEBUG:
+                    raise TemplateSyntaxError, inline['filter'] + ' is bad, dummy.'
+                else:
+                    return ''
+    
+    # Set Default Template
+    template = list()
+    try:
+        template.insert(0,inline['template'])
+    except KeyError:
+        pass
+    template.extend(["inlines/%s_%s.html" % (app_label, model_name), "inlines/default.html"])
+    
     rendered_inline = {'template':template, 'context':context}
 
     return rendered_inline

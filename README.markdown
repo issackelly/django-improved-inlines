@@ -24,13 +24,18 @@ a photo into a blog post body.
 Drop-in replacement for django-basic-inlines/inlines
 
 An example of the markup is:
-  <inline type="calendar.event" filter="date__gte=today" template="calendar/event_inline.html" />
+    <inline type="calendar.event" filter="date__gte=today" template="calendar/event_inline.html" />
+
+other attribute options are:
+	<inline type="app.model" id="<some pk>"  class="some_class_passed_to_template"/>
+	<inline type="app.model" ids="<some pk>,<some other pk>" />
 
 
 The type attribute is app_name.model_name and the id is
 the object id. Pretty simple.
 
 In your template you would say:
-  {% load inlines %}
+   {% load inlines %}
 
-  {{ post.body|render_inlines }}
+   {{ post.body|render_inlines }}
+
