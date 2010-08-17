@@ -3,7 +3,7 @@ from distutils.core import setup
 
 setup(
     name = "django-improved-inlines",
-    version = "0.1.7a",
+    version = "0.2.1",
     url = 'http://github.com/issackelly/django-improved-inlines',
     license = 'BSD',
     description = "Inline object rendering for django, based on django-basic-apps + filters + templates",
@@ -11,14 +11,14 @@ setup(
     author = 'Issac Kelly',
     author_email = 'issac@kellycreativetech.com',
     packages = [
-        'inlines',
-        'inlines.templatetags',
+        'improved_inlines',
+        'improved_inlines.templatetags',
     ],
     requires = [
         'BeautifulSoup',
     ],
     classifiers = [
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 4 - Beta',
         'Framework :: Django',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: BSD License',

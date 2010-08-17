@@ -17,6 +17,10 @@ Dependancies
 Usage
 =====
 
+Install in INSTALLED_APPS so the templates can be found
+
+"improved_inlines"
+
 Inlines is a template filter that can be used in
 conjunction with inline markup to insert content objects
 into other pieces of content. An example would be inserting
