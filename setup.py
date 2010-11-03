@@ -3,7 +3,7 @@ from distutils.core import setup
 
 setup(
     name = "django-improved-inlines",
-    version = "0.2.1",
+    version = "0.2.2",
     url = 'http://github.com/issackelly/django-improved-inlines',
     license = 'BSD',
     description = "Inline object rendering for django, based on django-basic-apps + filters + templates",

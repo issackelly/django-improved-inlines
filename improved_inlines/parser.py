@@ -10,11 +10,11 @@ import datetime
 
 def inlines(value, return_list=False):
     try:
-        from BeautifulSoup import BeautifulStoneSoup
+        from BeautifulSoup import BeautifulSoup
     except ImportError:
-        from beautifulsoup import BeautifulStoneSoup
+        from beautifulsoup import BeautifulSoup
 
-    content = BeautifulStoneSoup(value, selfClosingTags=['inline','img','br','input','meta','link','hr'])
+    content = BeautifulSoup(value, selfClosingTags=['inline','img','br','input','meta','link','hr'])
     inline_list = []
 
     if return_list:
