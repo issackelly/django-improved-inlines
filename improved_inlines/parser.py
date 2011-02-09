@@ -8,6 +8,19 @@ from django.utils.safestring import mark_safe
 import ast
 import datetime
 
+def is_inline(tag):
+    """
+    A filter function, made to be used with BeautifulSoup.
+
+    In order to match, a tag must be an `inline` or have either a
+    "data-inline-model" attribute or a "data-inline-id" attribute.
+
+    Returns an empty list (evaluates False) if it doesn't match, or a list with
+    tuples (evaluates True) containing the matched attributes and their values.
+    """
+    l = lambda attr: attr[0] == 'data-inline-model' or attr[0] == 'data-inline-id'
+    return tag.name == 'inline' or filter(l, tag.attrs)
+
 def inlines(value, return_list=False):
     try:
         from BeautifulSoup import BeautifulSoup
@@ -18,12 +31,12 @@ def inlines(value, return_list=False):
     inline_list = []
 
     if return_list:
-        for inline in content.findAll('inline'):
+        for inline in content.findAll(is_inline):
             rendered_inline = render_inline(inline)
             inline_list.append(rendered_inline['context'])
         return inline_list
     else:
-        for inline in content.findAll('inline'):
+        for inline in content.findAll(is_inline):
             rendered_inline = render_inline(inline)
             if rendered_inline:
                 inline.replaceWith(render_to_string(rendered_inline['template'], rendered_inline['context']))
