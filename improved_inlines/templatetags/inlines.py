@@ -23,7 +23,7 @@ def render_inlines(value):
         <inline type="<app_name>.<model_name>" ids="<id>, <id>, <id>" />
 
     An inline template will be used to render the inline. Templates will be
-    locaed in the following maner:
+    located in the following manner:
 
         ``inlines/<app_name>_<model_name>.html``
 

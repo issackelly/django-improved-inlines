@@ -14,12 +14,10 @@ def is_inline(tag):
 
     In order to match, a tag must be an `inline` or have either a
     "data-inline-model" attribute or a "data-inline-id" attribute.
-
-    Returns an empty list (evaluates False) if it doesn't match, or a list with
-    tuples (evaluates True) containing the matched attributes and their values.
     """
-    l = lambda attr: attr[0] == 'data-inline-model' or attr[0] == 'data-inline-id'
-    return tag.name == 'inline' or filter(l, tag.attrs)
+    check_attrs = lambda attr: attr[0] == 'data-inline-model' or attr[0] == 'data-inline-id' or attr[0] == 'data-inline-ids'
+    return tag.name == 'inline' or filter(check_attrs, tag.attrs)
+
 
 def inlines(value, return_list=False):
     try:
@@ -52,14 +50,18 @@ def render_inline(inline):
 
     """
 
-    # Look for inline type, 'app.model'
-    try:
-        app_label, model_name = inline['type'].split('.')
-    except:
+    # Look for inline model type, 'app.model'
+    if inline.name == 'inline':
+        model_string = inline.get('type', None)
+    else:
+        model_string = inline.get('data-inline-model', None)
+
+    if not model_string:
         if settings.DEBUG:
-            raise TemplateSyntaxError, "Couldn't find the attribute 'type' in the <inline> tag."
+            raise TemplateSyntaxError, "Couldn't find the appropriate attribute in the <%s> tag." % inline.name
         else:
             return ''
+    app_label, model_name = model_string.split('.')
 
     # Look for content type
     try:
@@ -67,70 +69,78 @@ def render_inline(inline):
         model = content_type.model_class()
     except ContentType.DoesNotExist:
         if settings.DEBUG:
-            raise TemplateSyntaxError, "Inline ContentType not found."
+            raise TemplateSyntaxError, "Inline ContentType not found for '%s.%s'." % (app_label, model_name)
         else:
             return ''
 
     # Check for an inline class attribute
-    try:
-        inline_class = smart_unicode(inline['class'])
-    except:
-        inline_class = ''
+    inline_class = smart_unicode(inline.get('class', ''))
 
-    try:
-        try:
-            id_list = [int(i) for i in inline['ids'].split(',')]
-            obj_list = model.objects.in_bulk(id_list)
-            obj_list = list(obj_list[int(i)] for i in id_list)
-            context = { 'object_list': obj_list, 'class': inline_class }
-        except ValueError:
-            if settings.DEBUG:
-                raise ValueError, "The <inline> ids attribute is missing or invalid."
+    if inline.name == 'inline':
+        id_list = inline.get('ids', None)
+    else:
+        id_list = inline.get('data-inline-ids', None)
+    if not id_list:
+        if inline.name == 'inline':
+            obj_id = inline.get('id', None)
+        else:
+            obj_id = inline.get('data-inline-id', None)
+        if not obj_id:
+            filters = inline.get('filter', None)
+            if not filters:
+                raise ValueError, "Could not find any of the right attributes in %s" % inline
             else:
-                return ''
-    except KeyError:
-        try:
+                # We have filters
+                try:
+                    l = inline['filter'].split(',')
+                    filterdict = dict()
+                    for item in l:
+                        try:
+                            # This is just here to throw a ValueError if there is no '='
+                            item.index('=')
+                            parts = item.split('=')
+                            ## This should work for text, Need to test for all sorts of values
+                            # Note: Potentially dangerous use of eval
+                            filterdict[parts[0]] = eval(parts[1])
+                        except ValueError:
+                            pass
+                    obj_list = list(model.objects.filter(**filterdict))
+                    context = { 'object_list': obj_list, 'class': inline_class }
+                except KeyError:
+                    if settings.DEBUG:
+                        raise TemplateSyntaxError, "The <inline> filter attribute is missing or invalid."
+                    else:
+                        return ''
+                except ValueError:
+                    if settings.DEBUG:
+                        raise TemplateSyntaxError, inline['filter'] + ' is bad, dummy.'
+                    else:
+                        return ''
+        else:
+            # We have obj_id
             try:
-                obj = model.objects.get(pk=inline['id'])
-                context = { 'content_type':"%s.%s" % (app_label, model_name), 'object': obj, 'class': inline_class, 'settings': settings }
+                obj = model.objects.get(pk=obj_id)
             except model.DoesNotExist:
                 if settings.DEBUG:
                     raise model.DoesNotExist, "%s with pk of '%s' does not exist" % (model_name, inline['id'])
                 else:
                     return ''
-        except KeyError:
-            try:
-                l = inline['filter'].split(',')
-                filterdict = dict()
-                for item in l:
-                    try:
-                        item.index('=')
-                        parts = item.split('=')
-                        ## This should work for text, Need to test for all sorts of values
-                        filterdict[parts[0]] = eval(parts[1])
-                    except ValueError:
-                        pass
-                obj_list = list(model.objects.filter(**filterdict))
-                context = { 'object_list': obj_list, 'class': inline_class }                
-            except KeyError:
-                if settings.DEBUG:
-                    raise TemplateSyntaxError, "The <inline> filter attribute is missing or invalid."
-                else:
-                    return ''
-            except ValueError:
-                if settings.DEBUG:
-                    raise TemplateSyntaxError, inline['filter'] + ' is bad, dummy.'
-                else:
-                    return ''
-    
+            context = { 'content_type':"%s.%s" % (app_label, model_name), 'object': obj, 'class': inline_class, 'settings': settings }
+    else:
+        # We have id_list
+        id_list = [int(i) for i in id_list.split(',')]
+        obj_list = model.objects.in_bulk(id_list)
+        obj_list = list(obj_list[int(i)] for i in id_list)
+        context = { 'object_list': obj_list, 'class': inline_class }
+
     # Set Default Template
     template = list()
     try:
-        template.insert(0,inline['template'])
+        template.insert(0, inline['template'])
     except KeyError:
         pass
     template.extend(["inlines/%s_%s.html" % (app_label, model_name), "inlines/default.html"])
-    
-    rendered_inline = {'template':template, 'context':context}
+
+    rendered_inline = {'template': template, 'context': context}
 
     return rendered_inline
