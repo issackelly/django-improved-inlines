@@ -8,6 +8,19 @@ from django.utils.safestring import mark_safe
 import ast
 import datetime
 
+
+INLINE_ATTRS = ["ids", "id", "filter", ]
+
+def get_inline_attrs(inline):
+    prefix = "data-inline-" if inline.name != 'inline' else ''
+    for attr in INLINE_ATTRS:
+        attr_val = inline.get(prefix + attr, None)
+        if attr_val:
+            return { attr: attr_val }
+    if settings.DEBUG:
+        raise ValueError, "Inline %s does not have any of the appropriate attributes: %s" % (inline, INLINE_ATTRS)
+    return None
+
 def is_inline(tag):
     """
     A filter function, made to be used with BeautifulSoup.
@@ -42,23 +55,21 @@ def inlines(value, return_list=False):
                 inline.replaceWith('')
         return mark_safe(content)
 
-
 def render_inline(inline):
     """
     Replace inline markup with template markup that matches the
     appropriate app and model.
 
     """
-
     # Look for inline model type, 'app.model'
     if inline.name == 'inline':
         model_string = inline.get('type', None)
     else:
-        model_string = inline.get('data-inline-model', None)
+        model_string = inline.get('data-inline-type', None)
 
     if not model_string:
         if settings.DEBUG:
-            raise TemplateSyntaxError, "Couldn't find the appropriate attribute in the <%s> tag." % inline.name
+            raise TemplateSyntaxError, "Couldn't find a model attribute in the <%s> tag." % inline.name
         else:
             return ''
     app_label, model_name = model_string.split('.')
@@ -76,62 +87,53 @@ def render_inline(inline):
     # Check for an inline class attribute
     inline_class = smart_unicode(inline.get('class', ''))
 
-    if inline.name == 'inline':
-        id_list = inline.get('ids', None)
-    else:
-        id_list = inline.get('data-inline-ids', None)
-    if not id_list:
-        if inline.name == 'inline':
-            obj_id = inline.get('id', None)
-        else:
-            obj_id = inline.get('data-inline-id', None)
-        if not obj_id:
-            filters = inline.get('filter', None)
-            if not filters:
-                raise ValueError, "Could not find any of the right attributes in %s" % inline
-            else:
-                # We have filters
-                try:
-                    l = inline['filter'].split(',')
-                    filterdict = dict()
-                    for item in l:
-                        try:
-                            # This is just here to throw a ValueError if there is no '='
-                            item.index('=')
-                            parts = item.split('=')
-                            ## This should work for text, Need to test for all sorts of values
-                            # Note: Potentially dangerous use of eval
-                            filterdict[parts[0]] = eval(parts[1])
-                        except ValueError:
-                            pass
-                    obj_list = list(model.objects.filter(**filterdict))
-                    context = { 'object_list': obj_list, 'class': inline_class }
-                except KeyError:
-                    if settings.DEBUG:
-                        raise TemplateSyntaxError, "The <inline> filter attribute is missing or invalid."
-                    else:
-                        return ''
-                except ValueError:
-                    if settings.DEBUG:
-                        raise TemplateSyntaxError, inline['filter'] + ' is bad, dummy.'
-                    else:
-                        return ''
-        else:
-            # We have obj_id
-            try:
-                obj = model.objects.get(pk=obj_id)
-            except model.DoesNotExist:
-                if settings.DEBUG:
-                    raise model.DoesNotExist, "%s with pk of '%s' does not exist" % (model_name, inline['id'])
-                else:
-                    return ''
-            context = { 'content_type':"%s.%s" % (app_label, model_name), 'object': obj, 'class': inline_class, 'settings': settings }
-    else:
-        # We have id_list
-        id_list = [int(i) for i in id_list.split(',')]
+    inline_attrs = get_inline_attrs(inline)
+
+    if not inline_attrs:
+        return ''
+
+    if inline_attrs.get("ids", None):
+        id_list = [int(i) for i in inline_attrs["ids"].split(',')]
         obj_list = model.objects.in_bulk(id_list)
         obj_list = list(obj_list[int(i)] for i in id_list)
         context = { 'object_list': obj_list, 'class': inline_class }
+    elif inline_attrs.get("id", None):
+        try:
+            obj = model.objects.get(pk=inline_attrs["id"])
+        except model.DoesNotExist:
+            if settings.DEBUG:
+                raise model.DoesNotExist, "%s with pk of '%s' does not exist" % (model_name, inline_attrs["id"])
+            else:
+                return ''
+        context = { 'content_type':"%s.%s" % (app_label, model_name), 'object': obj, 'class': inline_class, 'settings': settings }
+    elif inline_attrs.get("filter", None):
+        try:
+            l = inline_attrs["filter"].split(',')
+            filterdict = dict()
+            for item in l:
+                try:
+                    # This is just here to throw a ValueError if there is no '='
+                    item.index('=')
+                    parts = item.split('=')
+                    ## This should work for text, Need to test for all sorts of values
+                    # Note: Potentially dangerous use of eval
+                    filterdict[parts[0]] = eval(parts[1])
+                except ValueError:
+                    pass
+            obj_list = list(model.objects.filter(**filterdict))
+            context = { 'object_list': obj_list, 'class': inline_class }
+        except KeyError:
+            if settings.DEBUG:
+                raise TemplateSyntaxError, "The <inline> filter attribute is missing or invalid."
+            else:
+                return ''
+        except ValueError:
+            if settings.DEBUG:
+                raise TemplateSyntaxError, inline_attrs["filter"] + ' is bad, dummy.'
+            else:
+                return ''
+    else:
+        raise ValueError
 
     # Set Default Template
     template = list()
