@@ -9,10 +9,18 @@ import ast
 import datetime
 
 
-INLINE_ATTRS = ["ids", "id", "filter", ]
+INLINE_ATTRS = ['ids', 'id', 'filter', ]
 
-def get_inline_attrs(inline):
-    prefix = "data-inline-" if inline.name != 'inline' else ''
+def get_inline_attr(inline):
+    """
+    Tries all the attributes in INLINES_ATTRS in order, returning the first
+    one it finds. If the tag isn't <inline>, it searches for those attributes
+    with a given prefix.
+
+    Returns the attribute + value as a dict, or raises ValueError if it can't
+    find the right attributes.
+    """
+    prefix = 'data-inline-' if (inline.name != 'inline') else ''
     for attr in INLINE_ATTRS:
         attr_val = inline.get(prefix + attr, None)
         if attr_val:
@@ -25,12 +33,15 @@ def is_inline(tag):
     """
     A filter function, made to be used with BeautifulSoup.
 
-    In order to match, a tag must be an `inline` or have either a
-    "data-inline-model" attribute or a "data-inline-id" attribute.
+    Makes sure the tag is `inline`, or has both data-inline-type
+    and at least one of data-inline-{id,ids,filter} attributes.
     """
-    check_attrs = lambda attr: attr[0] == 'data-inline-model' or attr[0] == 'data-inline-id' or attr[0] == 'data-inline-ids'
-    return tag.name == 'inline' or filter(check_attrs, tag.attrs)
-
+    check_type  = lambda attr: attr[0] == 'data-inline-type'
+    check_attrs = lambda attr: attr[0] == 'data-inline-id' \
+                            or attr[0] == 'data-inline-ids' \
+                            or attr[0] == 'data-inline-filter'
+    checks_out = filter(check_type, tag.attrs) and filter(check_attrs, tag.attrs)
+    return checks_out or tag.name == 'inline'
 
 def inlines(value, return_list=False):
     try:
@@ -87,37 +98,40 @@ def render_inline(inline):
     # Check for an inline class attribute
     inline_class = smart_unicode(inline.get('class', ''))
 
-    inline_attrs = get_inline_attrs(inline)
+    inline_attr = get_inline_attr(inline)
 
-    if not inline_attrs:
+    if not inline_attr:
         return ''
 
-    if inline_attrs.get("ids", None):
-        id_list = [int(i) for i in inline_attrs["ids"].split(',')]
+    if inline_attr.get("ids", None):
+        # The tag has the 'ids' attribute, process accordingly...
+        id_list = [int(i) for i in inline_attr["ids"].split(',')]
         obj_list = model.objects.in_bulk(id_list)
         obj_list = list(obj_list[int(i)] for i in id_list)
         context = { 'object_list': obj_list, 'class': inline_class }
-    elif inline_attrs.get("id", None):
+    elif inline_attr.get("id", None):
+        # The tag has the 'id' attribute, process accordingly...
         try:
-            obj = model.objects.get(pk=inline_attrs["id"])
+            obj = model.objects.get(pk=inline_attr["id"])
         except model.DoesNotExist:
             if settings.DEBUG:
-                raise model.DoesNotExist, "%s with pk of '%s' does not exist" % (model_name, inline_attrs["id"])
+                raise model.DoesNotExist, "%s with pk of '%s' does not exist" % (model_name, inline_attr["id"])
             else:
                 return ''
         context = { 'content_type':"%s.%s" % (app_label, model_name), 'object': obj, 'class': inline_class, 'settings': settings }
-    elif inline_attrs.get("filter", None):
+    elif inline_attr.get("filter", None):
+        # The tag has the 'filter' attribute, process accordingly...
         try:
-            l = inline_attrs["filter"].split(',')
+            l = inline_attr["filter"].split(',')
             filterdict = dict()
             for item in l:
                 try:
-                    # This is just here to throw a ValueError if there is no '='
+                    # This is just here to raise a ValueError if there is no '='
                     item.index('=')
                     parts = item.split('=')
                     ## This should work for text, Need to test for all sorts of values
                     # Note: Potentially dangerous use of eval
-                    filterdict[parts[0]] = eval(parts[1])
+                    filterdict[str(parts[0])] = eval(parts[1])
                 except ValueError:
                     pass
             obj_list = list(model.objects.filter(**filterdict))
@@ -129,7 +143,7 @@ def render_inline(inline):
                 return ''
         except ValueError:
             if settings.DEBUG:
-                raise TemplateSyntaxError, inline_attrs["filter"] + ' is bad, dummy.'
+                raise TemplateSyntaxError, inline_attr["filter"] + ' is bad, dummy.'
             else:
                 return ''
     else:

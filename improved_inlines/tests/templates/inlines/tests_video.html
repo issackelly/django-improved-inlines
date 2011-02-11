@@ -1,0 +1,5 @@
+{% spaceless %}{% for object in object_list %}
+    <video src="{{ object.url }}" alt="{{ object.title }}">Test</video>
+{% empty %}
+    <video src="{{ object.url }}" alt="{{ object.title }}">Test</video>
+{% endfor %}{% endspaceless %}

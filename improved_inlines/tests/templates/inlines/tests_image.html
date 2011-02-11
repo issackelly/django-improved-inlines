@@ -1,0 +1,5 @@
+{% spaceless %}{% for object in object_list %}
+    <img src="{{ object.url }}" alt="{{ object.title }}" />
+{% empty %}
+    <img src="{{ object.url }}" alt="{{ object.title }}" />
+{% endfor %}{% endspaceless %}
