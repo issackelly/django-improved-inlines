@@ -25,5 +25,8 @@ setup(
         'Operating System :: OS Independent',
         'Programming Language :: Python',
         'Topic :: Internet :: WWW/HTTP',
-    ]
+    ],
+    
+    install_requires=['beautifulsoup>=3.2.0',],
+    
 )
