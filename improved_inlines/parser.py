@@ -61,7 +61,7 @@ def inlines(value, return_list=False):
         for inline in content.findAll(is_inline):
             rendered_inline = render_inline(inline)
             if rendered_inline:
-                inline.replaceWith(render_to_string(rendered_inline['template'], rendered_inline['context']))
+                inline.replaceWith(BeautifulSoup(render_to_string(rendered_inline['template'], rendered_inline['context'])))
             else:
                 inline.replaceWith('')
         return mark_safe(content)
