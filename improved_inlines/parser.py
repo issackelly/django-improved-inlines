@@ -151,10 +151,8 @@ def render_inline(inline):
 
     # Set Default Template
     template = list()
-    try:
-        template.insert(0, inline['template'])
-    except KeyError:
-        pass
+    if inline_attr.get('template', None):
+        template.insert(0, inline_attr.get('template'))
     template.extend(["inlines/%s_%s.html" % (app_label, model_name), "inlines/default.html"])
 
     rendered_inline = {'template': template, 'context': context}
