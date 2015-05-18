@@ -15,7 +15,7 @@ setup(
         'improved_inlines.templatetags',
     ],
     requires = [
-        'BeautifulSoup',
+        'beautifulsoup4',
     ],
     classifiers = [
         'Development Status :: 4 - Beta',
@@ -26,7 +26,7 @@ setup(
         'Programming Language :: Python',
         'Topic :: Internet :: WWW/HTTP',
     ],
-    
-    install_requires=['beautifulsoup>=3.2.0',],
-    
+
+    install_requires=['beautifulsoup4',],
+
 )

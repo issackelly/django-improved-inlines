@@ -2,7 +2,7 @@ from django.template import TemplateSyntaxError
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.http import Http404
-from django.utils.encoding import smart_unicode
+from django.utils.encoding import smart_text
 from django.template.loader import render_to_string
 from django.utils.safestring import mark_safe
 import ast
@@ -26,7 +26,7 @@ def get_inline_attr(inline):
         if attr_val:
             return { attr: attr_val }
     if settings.DEBUG:
-        raise ValueError, "Inline %s does not have any of the appropriate attributes: %s" % (inline, INLINE_ATTRS)
+        raise ValueError("Inline %s does not have any of the appropriate attributes: %s" % (inline, INLINE_ATTRS))
     return None
 
 def is_inline(tag):
@@ -44,10 +44,7 @@ def is_inline(tag):
     return checks_out or tag.name == 'inline'
 
 def inlines(value, return_list=False):
-    try:
-        from BeautifulSoup import BeautifulSoup
-    except ImportError:
-        from beautifulsoup import BeautifulSoup
+    from bs4 import BeautifulSoup
 
     content = BeautifulSoup(value, selfClosingTags=['inline','img','br','input','meta','link','hr'])
     inline_list = []
@@ -79,10 +76,10 @@ def render_inline(inline):
         model_string = inline.get('data-inline-type', None)
 
     if not model_string:
-        if settings.DEBUG:
-            raise TemplateSyntaxError, "Couldn't find a model attribute in the <%s> tag." % inline.name
-        else:
-            return ''
+        #if settings.TEMPLATE_DEBUG:
+        #    raise TemplateSyntaxError("Couldn't find a model attribute in the <%s> tag." % inline.name)
+        #else:
+        return ''
     app_label, model_name = model_string.split('.')
 
     # Look for content type
@@ -91,12 +88,12 @@ def render_inline(inline):
         model = content_type.model_class()
     except ContentType.DoesNotExist:
         if settings.DEBUG:
-            raise TemplateSyntaxError, "Inline ContentType not found for '%s.%s'." % (app_label, model_name)
+            raise TemplateSyntaxError("Inline ContentType not found for '%s.%s'." % (app_label, model_name))
         else:
             return ''
 
     # Check for an inline class attribute
-    inline_class = smart_unicode(inline.get('class', ''))
+    inline_class = smart_text(inline.get('class', ''))
 
     inline_attr = get_inline_attr(inline)
 
@@ -115,7 +112,7 @@ def render_inline(inline):
             obj = model.objects.get(pk=inline_attr["id"])
         except model.DoesNotExist:
             if settings.DEBUG:
-                raise model.DoesNotExist, "%s with pk of '%s' does not exist" % (model_name, inline_attr["id"])
+                raise model.DoesNotExist("%s with pk of '%s' does not exist" % (model_name, inline_attr["id"]))
             else:
                 return ''
         context = { 'content_type':"%s.%s" % (app_label, model_name), 'object': obj, 'class': inline_class, 'settings': settings }
@@ -138,12 +135,12 @@ def render_inline(inline):
             context = { 'object_list': obj_list, 'class': inline_class }
         except KeyError:
             if settings.DEBUG:
-                raise TemplateSyntaxError, "The <inline> filter attribute is missing or invalid."
+                raise TemplateSyntaxError("The <inline> filter attribute is missing or invalid.")
             else:
                 return ''
         except ValueError:
             if settings.DEBUG:
-                raise TemplateSyntaxError, inline_attr["filter"] + ' is bad, dummy.'
+                raise TemplateSyntaxError(inline_attr["filter"] + ' is bad, dummy.')
             else:
                 return ''
     else:
